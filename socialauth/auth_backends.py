@@ -33,6 +33,8 @@ class OpenIdBackend:
             #fetch if openid provider provides any simple registration fields
             nickname = None
             email = None
+            first_name = None
+            last_name = None
             if request.openid and request.openid.sreg:
                 email = request.openid.sreg.get('email')
                 nickname = request.openid.sreg.get('nickname')
@@ -40,6 +42,14 @@ class OpenIdBackend:
                 email = request.openid.ax.get('http://axschema.org/contact/email')[0]
                 try:
                       nickname = request.openid.ax.get('nickname')#should be replaced by correct schema
+                except:
+                      pass
+                try:
+                      first_name = request.openid.ax.get('http://axschema.org/namePerson/first').pop()
+                except:
+                      pass
+                try:
+                      last_name = request.openid.ax.get('http://axschema.org/namePerson/last').pop()
                 except:
                       pass
             if nickname is None :
@@ -59,6 +69,10 @@ class OpenIdBackend:
 
             if not user:
                 user = User.objects.create_user(username, email or '')
+                if first_name is not None:
+                    user.first_name = first_name
+                if last_name is not None:
+                    user.last_name = last_name
                 user.save()
     
             #create openid association

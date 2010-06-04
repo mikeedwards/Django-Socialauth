@@ -204,6 +204,7 @@ def openid_done(request, provider=None):
 
         if request.user and request.user.is_authenticated():
             res = authenticate(openid_key=openid_key, request=request, provider = provider, user=request.user)
+            login(request, user)
             if res:
                 return HttpResponseRedirect(ADD_LOGIN_REDIRECT_URL + '?add_login=true')
             else:
