@@ -71,6 +71,15 @@ def linkedin_login_done(request):
     if not request_token:
         # Send them to the login page
         return HttpResponseRedirect(reverse("socialauth_login_page"))
+    try:
+        linkedin = LinkedIn(settings.LINKEDIN_CONSUMER_KEY, settings.LINKEDIN_CONSUMER_SECRET)
+        verifier = request.GET.get('oauth_verifier', None)
+        access_token = linkedin.getAccessToken(request_token,verifier)
+
+        request.session['access_token'] = access_token
+        user = authenticate(linkedin_access_token=access_token)
+    except:
+        user = None
 
     linkedin = LinkedIn(LINKEDIN_CONSUMER_KEY, LINKEDIN_CONSUMER_SECRET)
     verifier = request.GET.get('oauth_verifier', None)
@@ -133,18 +142,19 @@ def twitter_login_done(request):
             del request.session['request_token']
             # Redirect the user to the login page
             return HttpResponseRedirect(reverse("socialauth_login_page"))
-    
-    twitter = oauthtwitter.TwitterOAuthClient(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET)  
-    access_token = twitter.fetch_access_token(token, verifier)
-    
-    request.session['access_token'] = access_token.to_string()
-    
-    if request.user and request.user.is_authenticated():
-        res = authenticate(twitter_access_token=access_token, user=request.user)
-        if res:
-            return HttpResponseRedirect(ADD_LOGIN_REDIRECT_URL + '?add_login=true')
-        else:
-            return HttpResponseRedirect(ADD_LOGIN_REDIRECT_URL + '?add_login=false')
+
+    try:
+        twitter = oauthtwitter.TwitterOAuthClient(settings.TWITTER_CONSUMER_KEY, settings.TWITTER_CONSUMER_SECRET)
+        access_token = twitter.fetch_access_token(token, verifier)
+
+        request.session['access_token'] = access_token.to_string()
+        user = authenticate(twitter_access_token=access_token)
+    except:
+        user = None
+
+    # if user is authenticated then login user
+    if user:
+        login(request, user)
     else:
         user = authenticate(twitter_access_token=access_token)
     
