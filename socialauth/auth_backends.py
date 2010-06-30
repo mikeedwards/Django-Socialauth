@@ -6,10 +6,8 @@ import facebook
 import urllib
 from socialauth.lib import oauthtwitter2 as oauthtwitter
 from socialauth.models import OpenidProfile as UserAssociation, TwitterUserProfile, FacebookUserProfile, LinkedInUserProfile, AuthMeta
-from socialauth.lib.facebook import get_user_info, get_facebook_signature
 from socialauth.lib.linkedin import *
 
-from datetime import datetime
 import random
 
 TWITTER_CONSUMER_KEY = getattr(settings, 'TWITTER_CONSUMER_KEY', '')
@@ -20,7 +18,6 @@ FACEBOOK_API_KEY = getattr(settings, 'FACEBOOK_API_KEY', '')
 FACEBOOK_SECRET_KEY = getattr(settings, 'FACEBOOK_SECRET_KEY', '')
 
 # Linkedin
-
 LINKEDIN_CONSUMER_KEY = getattr(settings, 'LINKEDIN_CONSUMER_KEY', '')
 LINKEDIN_CONSUMER_SECRET = getattr(settings, 'LINKEDIN_CONSUMER_SECRET', '')
 
@@ -114,10 +111,9 @@ class OpenIdBackend:
             return None
 
 class LinkedInBackend:
-    """LinkedInBackend for authentication
-    """
+    """LinkedInBackend for authentication"""
     def authenticate(self, linkedin_access_token, user=None):
-        linkedin = LinkedIn(settings.LINKEDIN_CONSUMER_KEY, settings.LINKEDIN_CONSUMER_SECRET)
+        linkedin = LinkedIn(LINKEDIN_CONSUMER_KEY, LINKEDIN_CONSUMER_SECRET)
         # get their profile
         
         profile = ProfileApi(linkedin).getMyProfile(access_token = linkedin_access_token)
@@ -140,7 +136,6 @@ class LinkedInBackend:
             userprofile.save()
             
             auth_meta = AuthMeta(user=user, provider='LinkedIn').save()
-            
             return user
 
     def get_user(self, user_id):
@@ -150,11 +145,9 @@ class LinkedInBackend:
             return None
 
 class TwitterBackend:
-    """TwitterBackend for authentication
-    """
+    """TwitterBackend for authentication"""
     def authenticate(self, twitter_access_token, user=None):
-        '''authenticates the token by requesting user information from twitter
-        '''
+        '''authenticates the token by requesting user information from twitter'''
         # twitter = oauthtwitter.OAuthApi(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, twitter_access_token)
         twitter = oauthtwitter.TwitterOAuthClient(settings.TWITTER_CONSUMER_KEY, settings.TWITTER_CONSUMER_SECRET)
         try:
@@ -164,6 +157,7 @@ class TwitterBackend:
             raise
 
         screen_name = userinfo.screen_name
+        twitter_id = userinfo.id
         
         try:
             user_profile = TwitterUserProfile.objects.get(screen_name=screen_name)
