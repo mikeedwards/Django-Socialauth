@@ -6,3 +6,6 @@ localsettings.py
 .svn/
 .svn/*
 data.db
+*.wpr
+facebook.py
+settings.py

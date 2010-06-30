@@ -4,7 +4,7 @@ from django.conf import settings
 import facebook
 
 import urllib
-from socialauth.lib import oauthtwitter
+from socialauth.lib import oauthtwitter2 as oauthtwitter
 from socialauth.models import OpenidProfile as UserAssociation, TwitterUserProfile, FacebookUserProfile, LinkedInUserProfile, AuthMeta
 from socialauth.lib.facebook import get_user_info, get_facebook_signature
 from socialauth.lib.linkedin import *
@@ -24,6 +24,10 @@ FACEBOOK_SECRET_KEY = getattr(settings, 'FACEBOOK_SECRET_KEY', '')
 LINKEDIN_CONSUMER_KEY = getattr(settings, 'LINKEDIN_CONSUMER_KEY', '')
 LINKEDIN_CONSUMER_SECRET = getattr(settings, 'LINKEDIN_CONSUMER_SECRET', '')
 
+# OpenId setting map
+
+OPENID_AX_PROVIDER_MAP = getattr(settings, 'OPENID_AX_PROVIDER_MAP', {})
+
 class OpenIdBackend:
     def authenticate(self, openid_key, request, provider, user=None):
         try:
@@ -38,6 +42,7 @@ class OpenIdBackend:
             if request.openid and request.openid.sreg:
                 email = request.openid.sreg.get('email')
                 nickname = request.openid.sreg.get('nickname')
+                first_name, last_name = request.openid.sreg.get('fullname', '').split(' ', 1)
             elif request.openid and request.openid.ax:
                 email = request.openid.ax.get('http://axschema.org/contact/email')[0]
                 try:
@@ -66,7 +71,7 @@ class OpenIdBackend:
                 email =  "{0}@socialauth".format(username)
             else:
                 valid_username = True
-
+            
             if not user:
                 user = User.objects.create_user(username, email or '')
                 if first_name is not None:
@@ -88,10 +93,19 @@ class OpenIdBackend:
             assoc.save()
             
             #Create AuthMeta
-            auth_meta = AuthMeta(user=user, provider=provider, provider_model='OpenidProfile', provider_id=assoc.pk)
+            # auth_meta = AuthMeta(user=user, provider=provider, provider_model='OpenidProfile', provider_id=assoc.pk)
+            auth_meta = AuthMeta(user=user, provider=provider)
             auth_meta.save()
             return user
-    
+        
+    def GooglesAX(self,openid_response):
+        email = openid_response.ax.getSingle('http://axschema.org/contact/email')
+        firstname = openid_response.ax.getSingle('http://axschema.org/namePerson/first')
+        lastname = openid_response.ax.getSingle('http://axschema.org/namePerson/last')
+        # country = openid_response.ax.getSingle('http://axschema.org/contact/country/home')
+        # language = openid_response.ax.getSingle('http://axschema.org/pref/language')
+        return locals()
+  
     def get_user(self, user_id):
         try:
             user = User.objects.get(pk = user_id)
@@ -141,9 +155,10 @@ class TwitterBackend:
     def authenticate(self, twitter_access_token, user=None):
         '''authenticates the token by requesting user information from twitter
         '''
-        twitter = oauthtwitter.OAuthApi(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, twitter_access_token)
+        # twitter = oauthtwitter.OAuthApi(TWITTER_CONSUMER_KEY, TWITTER_CONSUMER_SECRET, twitter_access_token)
+        twitter = oauthtwitter.TwitterOAuthClient(settings.TWITTER_CONSUMER_KEY, settings.TWITTER_CONSUMER_SECRET)
         try:
-            userinfo = twitter.GetUserInfo()
+            userinfo = twitter.get_user_info(twitter_access_token)
         except:
             # If we cannot get the user information, user cannot be authenticated
             raise

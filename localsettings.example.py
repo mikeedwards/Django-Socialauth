@@ -14,12 +14,23 @@ OPENID_AX = [{"type_uri": "http://axschema.org/contact/email",
               "required": False,
               "alias": "fname"}]
 
+OPENID_AX_PROVIDER_MAP = {'Google': {'email': 'http://axschema.org/contact/email',
+                                     'firstname': 'http://axschema.org/namePerson/first',
+                                     'lastname': 'http://axschema.org/namePerson/last'},
+                          'Default': {'email': 'http://axschema.org/contact/email',
+                                      'fullname': 'http://axschema.org/namePerson',
+                                      'nickname': 'http://axschema.org/namePerson/friendly'}
+                          }
+
 TWITTER_CONSUMER_KEY = ''
 TWITTER_CONSUMER_SECRET = ''
 
 FACEBOOK_APP_ID = ''
 FACEBOOK_API_KEY = ''
 FACEBOOK_SECRET_KEY = ''
+
+LINKEDIN_CONSUMER_KEY = ''
+LINKEDIN_CONSUMER_SECRET = ''
 
 ## if any of this information is desired for your app
 FACEBOOK_EXTENDED_PERMISSIONS = (
@@ -75,14 +86,10 @@ FACEBOOK_EXTENDED_PERMISSIONS = (
 )
 
 
-AUTHENTICATION_BACKENDS = ('django.contrib.auth.backends.ModelBackend',
-                           'socialauth.auth_backends.OpenIdBackend',
-                           'socialauth.auth_backends.TwitterBackend',
-                           'socialauth.auth_backends.FacebookBackend',
-                           )
-
-
-
-
-
-
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'socialauth.auth_backends.OpenIdBackend',
+    'socialauth.auth_backends.TwitterBackend',
+    'socialauth.auth_backends.FacebookBackend',
+    'socialauth.auth_backends.LinkedInBackend',
+)

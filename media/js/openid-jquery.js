@@ -12,7 +12,7 @@ var providers_large = {
     },
     yahoo: {
         name: 'Yahoo',      
-        url: 'http://yahoo.com/'
+        url: 'https://me.yahoo.com/'
     },    
     aol: {
         name: 'AOL',     
@@ -39,7 +39,7 @@ var providers_small = {
     flickr: {
         name: 'Flickr',        
         label: 'Enter your Flickr username.',
-        url: 'http://flickr.com/{username}/'
+        url: 'http://flickr.com/photos/{username}/'
     },
     technorati: {
         name: 'Technorati',
