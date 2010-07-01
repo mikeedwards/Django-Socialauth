@@ -5,10 +5,13 @@ from django.contrib import admin
 admin.autodiscover()
 
 urlpatterns = patterns('',
+    (r'^blog/', include('example.urls')),
     (r'^accounts/', include('socialauth.urls')),
     (r'^admin/', admin.site.urls), 
     #(r'^$', leave_comment), 
-    (r'^$', 'socialauth.views.signin_complete'), 
+    (r'^$', 'socialauth.views.signin_complete'),
+    (r'^comments/post/', 'example_comments.views.post_comment'),
+    (r'comments/', include('django.contrib.comments.urls')),
 )
 
 from django.conf import settings
