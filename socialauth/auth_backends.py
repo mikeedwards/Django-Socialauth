@@ -291,9 +291,22 @@ class FacebookBackend:
                 user = User.objects.create(username=username)
                 user.first_name = fb_data['first_name']
                 user.last_name = fb_data['last_name']
+                user.email = fb_data.get('email')
                 user.save()
                 
-            fb_profile = FacebookUserProfile(facebook_uid=uid, user=user)
+            picture_url = 'http://graph.facebook.com/%s/picture' % uid
+            fb_profile = FacebookUserProfile(
+                facebook_uid=uid, 
+                user=user,
+                profile_image_url = picture_url,
+                profile_image_url_small = picture_url + '?type=small',
+                profile_image_url_big = picture_url + '?type=large',
+                about_me = fb_data.get('about'),
+                url = fb_data.get('website'),
+            )
+            if 'location' in fb_data:
+                fb_profile.location = fb_data['location']['name']
+
             fb_profile.save()
             
             auth_meta = AuthMeta(user=user, provider='Facebook').save()
