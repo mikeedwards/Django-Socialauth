@@ -3,6 +3,7 @@ from django.core.urlresolvers import reverse
 from django.conf import settings
 import facebook
 
+import urlparse
 import urllib
 from socialauth.lib import oauthtwitter2 as oauthtwitter
 from socialauth.models import OpenidProfile as UserAssociation, \
@@ -17,6 +18,8 @@ TWITTER_CONSUMER_SECRET = getattr(settings, 'TWITTER_CONSUMER_SECRET', '')
 FACEBOOK_APP_ID = getattr(settings, 'FACEBOOK_APP_ID', '')
 FACEBOOK_API_KEY = getattr(settings, 'FACEBOOK_API_KEY', '')
 FACEBOOK_SECRET_KEY = getattr(settings, 'FACEBOOK_SECRET_KEY', '')
+FACEBOOK_CONNECT_URL = getattr(settings, 'FACEBOOK_CONNECT_URL', '')
+FACEBOOK_CONNECT_DOMAIN = getattr(settings, 'FACEBOOK_CONNECT_DOMAIN', '')
 
 # Linkedin
 LINKEDIN_CONSUMER_KEY = getattr(settings, 'LINKEDIN_CONSUMER_KEY', '')
@@ -255,23 +258,32 @@ class FacebookBackend:
             params = {}
             params["client_id"] = FACEBOOK_APP_ID
             params["client_secret"] = FACEBOOK_SECRET_KEY
-            params["redirect_uri"] = reverse(
-                                              "socialauth_facebook_login_done"
-                                              )[1:]
-            params["code"] = request.GET.get('code', '')
+            redirect_uri = request.build_absolute_uri(reverse('socialauth_facebook_login_done'))
+            if FACEBOOK_CONNECT_DOMAIN and FACEBOOK_CONNECT_URL:
+                o = urlparse.urlparse(redirect_uri)
+                if not o.netloc.endswith(FACEBOOK_CONNECT_DOMAIN):
+                    redirect_uri = FACEBOOK_CONNECT_URL % urllib.quote(redirect_uri, safe='')
 
+            params["redirect_uri"] = redirect_uri
+            params["code"] = request.GET.get('code', '')
             url = ("https://graph.facebook.com/oauth/access_token?"
                    +urllib.urlencode(params))
             from cgi import parse_qs
             userdata = urllib.urlopen(url).read()
             res_parse_qs = parse_qs(userdata)
+
             # Could be a bot query
             if not res_parse_qs.has_key('access_token'):
                 return None
                 
-            parse_data = res_parse_qs['access_token']
-            uid = parse_data['uid'][-1]
-            access_token = parse_data['access_token'][-1]
+            access_token = res_parse_qs['access_token'][-1]
+
+            graph = facebook.GraphAPI(access_token)
+            fb_data = graph.get_object("me")
+            if not fb_data:
+                return None
+            uid = fb_data['id']
+
             
         try:
             fb_user = FacebookUserProfile.objects.get(facebook_uid=uid)
@@ -280,35 +292,25 @@ class FacebookBackend:
         except FacebookUserProfile.DoesNotExist:
             
             # create new FacebookUserProfile
-            graph = facebook.GraphAPI(access_token) 
-            fb_data = graph.get_object("me")
-
-            if not fb_data:
-                return None
-
-            username = uid
             if not user:
-                user = User.objects.create(username=username)
-                user.first_name = fb_data['first_name']
-                user.last_name = fb_data['last_name']
-                user.email = fb_data.get('email')
-                user.save()
-                
-            picture_url = 'http://graph.facebook.com/%s/picture' % uid
-            fb_profile = FacebookUserProfile(
-                facebook_uid=uid, 
-                user=user,
-                profile_image_url = picture_url,
-                profile_image_url_small = picture_url + '?type=small',
-                profile_image_url_big = picture_url + '?type=large',
-                about_me = fb_data.get('about'),
-                url = fb_data.get('website'),
-            )
-            if 'location' in fb_data:
-                fb_profile.location = fb_data['location']['name']
+                name = fb_data['name']
+                count = User.objects.filter(username__startswith=name).count()
+                if not count:
+                    username = name
+                else:
+                    username = '%s %i' % (name, count + 1)
 
-            fb_profile.save()
-            
+                user = User.objects.create(username=username,
+                                           first_name=fb_data['first_name'],
+                                           last_name=fb_data['last_name'])
+                
+            FacebookUserProfile.objects.create(
+                facebook_uid=uid,
+                user=user,
+                location=fb_data.get('location', {}).get('name', ''),
+                url=fb_data.get('website', ''),
+                about_me=fb_data.get('about', ''))
+
             auth_meta = AuthMeta(user=user, provider='Facebook').save()
                 
             return user
